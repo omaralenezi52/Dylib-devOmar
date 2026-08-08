@@ -3,10 +3,9 @@ ARCHS = arm64
 
 include $(THEOS)/makefiles/common.mk
 
-LIBRARY_NAME = DevOmar
-DevOmar_FILES = Tweak.m
+TWEAK_NAME = DevOmar
+DevOmar_FILES = Tweak.x
 DevOmar_CFLAGS = -fobjc-arc
-DevOmar_FRAMEWORKS = UIKit Foundation QuartzCore
-DevOmar_LDFLAGS = -install_name @executable_path/DevOmar.dylib
+DevOmar_FRAMEWORKS = UIKit
 
-include $(THEOS)/makefiles/library.mk
+include $(THEOS)/makefiles/tweak.mk

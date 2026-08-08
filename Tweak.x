@@ -3,8 +3,8 @@
 //  Twitter: FQ_1E   |   Telegram: o52lo
 // ============================================================
 //  بطاقة حقوق أنيقة تظهر بمنتصف الشاشة أول ما يفتح التطبيق.
-//  تدعم الوضع الليلي والنهاري.
-//  كل الإعدادات تحت مباشرة — عدّلها براحتك.
+//  تدعم الوضع الليلي والنهاري. تشتغل على التطبيقات المحقونة
+//  (sideloaded) بدون جيلبريك — عبر +load مثل النماذج المجرّبة.
 // ============================================================
 
 #import <UIKit/UIKit.h>
@@ -15,14 +15,10 @@ static NSString *const kMessage      = @"شكراً لاستخدامك التط�
 static NSString *const kTwitterUser  = @"FQ_1E";                   // يوزر تويتر (بدون @)
 static NSString *const kTelegramUser = @"o52lo";                   // يوزر تيليجرام (بدون @)
 
-// اللون الرئيسي للأزرار (تليجرام) — غيّره لما تبي
+// اللون الرئيسي لزر تيليجرام
 #define kAccentColor  [UIColor colorWithRed:0.16 green:0.55 blue:0.92 alpha:1.0]
-
-// نوع الظهور: YES = مرة وحدة بعمر التطبيق | NO = كل ما يفتح التطبيق
-static const BOOL kShowOnce = NO;
 // =============================================
 
-static BOOL gShown = NO;
 
 #pragma mark - Overlay View
 
@@ -69,11 +65,9 @@ static BOOL gShown = NO;
     UIColor *textSub   = dark ? [UIColor colorWithWhite:0.7 alpha:1.0] : [UIColor colorWithWhite:0.45 alpha:1.0];
     UIColor *btnBorder = dark ? [UIColor colorWithWhite:1.0 alpha:0.18] : [UIColor colorWithWhite:0.0 alpha:0.12];
 
-    // إغلاق باللمس على الخلفية
     UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(bgTapped:)];
     [self addGestureRecognizer:tap];
 
-    // ---- البطاقة ----
     CGFloat cardW = MIN(320.0, self.bounds.size.width - 48.0);
     UIView *card = [[UIView alloc] init];
     self.card = card;
@@ -91,7 +85,6 @@ static BOOL gShown = NO;
         [card.widthAnchor constraintEqualToConstant:cardW],
     ]];
 
-    // ستاك عمودي
     UIStackView *stack = [[UIStackView alloc] init];
     stack.axis = UILayoutConstraintAxisVertical;
     stack.alignment = UIStackViewAlignmentCenter;
@@ -105,7 +98,6 @@ static BOOL gShown = NO;
         [stack.trailingAnchor constraintEqualToAnchor:card.trailingAnchor constant:-22],
     ]];
 
-    // ---- زر الإغلاق X ----
     UIButton *closeBtn = [UIButton buttonWithType:UIButtonTypeSystem];
     [closeBtn setTitle:@"✕" forState:UIControlStateNormal];
     closeBtn.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
@@ -120,7 +112,6 @@ static BOOL gShown = NO;
         [closeBtn.heightAnchor constraintEqualToConstant:30],
     ]];
 
-    // ---- الأيقونة ----
     UIImage *icon = [OMRCreditsOverlay appIcon];
     if (icon) {
         UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
@@ -133,7 +124,6 @@ static BOOL gShown = NO;
         [stack addArrangedSubview:iv];
     }
 
-    // ---- الاسم ----
     UILabel *name = [[UILabel alloc] init];
     name.text = kOwnerName;
     name.font = [UIFont systemFontOfSize:26 weight:UIFontWeightHeavy];
@@ -141,7 +131,6 @@ static BOOL gShown = NO;
     name.textAlignment = NSTextAlignmentCenter;
     [stack addArrangedSubview:name];
 
-    // ---- الرسالة ----
     UILabel *msg = [[UILabel alloc] init];
     msg.text = kMessage;
     msg.font = [UIFont systemFontOfSize:14 weight:UIFontWeightRegular];
@@ -154,7 +143,6 @@ static BOOL gShown = NO;
     [spacer.heightAnchor constraintEqualToConstant:4].active = YES;
     [stack addArrangedSubview:spacer];
 
-    // ---- زر تويتر ----
     UIButton *tw = [self accountButtonTitle:[NSString stringWithFormat:@"𝕏  %@", kTwitterUser]
                                        text:textMain border:btnBorder];
     [tw addTarget:self action:@selector(openTwitter) forControlEvents:UIControlEventTouchUpInside];
@@ -162,7 +150,6 @@ static BOOL gShown = NO;
     [tw.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
     [tw.heightAnchor constraintEqualToConstant:46].active = YES;
 
-    // ---- زر تيليجرام (الرئيسي) ----
     UIButton *tg = [UIButton buttonWithType:UIButtonTypeSystem];
     [tg setTitle:[NSString stringWithFormat:@"✈  Telegram — %@", kTelegramUser] forState:UIControlStateNormal];
     tg.titleLabel.font = [UIFont systemFontOfSize:16 weight:UIFontWeightBold];
@@ -216,14 +203,20 @@ static BOOL gShown = NO;
 
 @end
 
-#pragma mark - Helpers
 
-static UIWindow *OMRActiveWindow(void) {
+#pragma mark - Loader (نفس تقنية النماذج المجرّبة: +load)
+
+@interface OMRCreditsLoader : NSObject
++ (void)showCredits;
+@end
+
+@implementation OMRCreditsLoader
+
++ (UIWindow *)activeWindow {
     UIWindow *fallback = nil;
     for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
         if (![scene isKindOfClass:[UIWindowScene class]]) continue;
-        UIWindowScene *ws = (UIWindowScene *)scene;
-        for (UIWindow *w in ws.windows) {
+        for (UIWindow *w in ((UIWindowScene *)scene).windows) {
             if (!fallback) fallback = w;
             if (w.isKeyWindow) return w;
         }
@@ -231,41 +224,24 @@ static UIWindow *OMRActiveWindow(void) {
     return fallback;
 }
 
-static void OMRShowCredits(void) {
-    UIWindow *host = OMRActiveWindow();
-    if (!host) return;
++ (void)showCredits {
+    UIWindow *host = [self activeWindow];
+    if (!host) {
+        // النافذة لسة ما جهزت — نعيد المحاولة بعد لحظة
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.0 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            [self showCredits];
+        });
+        return;
+    }
     OMRCreditsOverlay *overlay = [[OMRCreditsOverlay alloc] initWithFrame:host.bounds];
     [host addSubview:overlay];
     [overlay present];
 }
 
-#pragma mark - Entry (no Substrate needed — works on sideloaded apps)
-
-static void OMRScheduleShow(void) {
-    if (kShowOnce && gShown) return;
-    gShown = YES;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        OMRShowCredits();
++ (void)load {
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+        [self showCredits];
     });
 }
 
-__attribute__((constructor))
-static void OMRInit(void) {
-    @autoreleasepool {
-        // نراقب لحظة تفعيل التطبيق — لا يحتاج Substrate
-        [[NSNotificationCenter defaultCenter]
-            addObserverForName:UIApplicationDidBecomeActiveNotification
-                        object:nil
-                         queue:[NSOperationQueue mainQueue]
-                    usingBlock:^(NSNotification *note) {
-            OMRScheduleShow();
-        }];
-
-        // احتياط: لو كان التطبيق فعّال قبل تحميل الدايلب
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-            if ([UIApplication sharedApplication].applicationState == UIApplicationStateActive) {
-                OMRScheduleShow();
-            }
-        });
-    }
-}
+@end
