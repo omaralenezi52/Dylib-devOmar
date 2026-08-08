@@ -239,15 +239,32 @@ static void OMRShowCredits(void) {
     [overlay present];
 }
 
-#pragma mark - Hook
+#pragma mark - Entry (no Substrate needed — works on sideloaded apps)
 
-%hook UIApplication
-- (void)_applicationDidBecomeActive:(id)notification {
-    %orig;
+static void OMRScheduleShow(void) {
     if (kShowOnce && gShown) return;
     gShown = YES;
-    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.8 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
         OMRShowCredits();
     });
 }
-%end
+
+%ctor {
+    @autoreleasepool {
+        // نراقب لحظة تفعيل التطبيق — لا يحتاج Substrate
+        [[NSNotificationCenter defaultCenter]
+            addObserverForName:UIApplicationDidBecomeActiveNotification
+                        object:nil
+                         queue:[NSOperationQueue mainQueue]
+                    usingBlock:^(NSNotification *note) {
+            OMRScheduleShow();
+        }];
+
+        // احتياط: لو كان التطبيق فعّال قبل تحميل الدايلب
+        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1.5 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
+            if ([UIApplication sharedApplication].applicationState == UIApplicationStateActive) {
+                OMRScheduleShow();
+            }
+        });
+    }
+}
