@@ -8,6 +8,7 @@
 // ============================================================
 
 #import <UIKit/UIKit.h>
+#import <objc/runtime.h>
 
 // ================= الإعدادات =================
 static NSString *const kOwnerName   = @"OMAR";                     // الاسم الظاهر
