@@ -1,0 +1,44 @@
+name: Build dylib
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Theos
+        uses: Randomblock1/theos-action@v1
+
+      - name: Build
+        run: |
+          make clean || true
+          make
+          echo "----- built files -----"
+          find .theos/obj -name "*.dylib" -print
+
+      - name: Collect dylib
+        run: |
+          mkdir -p out
+          find .theos/obj -name "DevOmar.dylib" -exec cp {} out/DevOmar.dylib \;
+          ls -la out
+
+      - name: Upload dylib artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: DevOmar-dylib
+          path: out/DevOmar.dylib
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: DevOmar dylib build ${{ github.run_number }}
+          files: out/DevOmar.dylib
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
