@@ -8,10 +8,9 @@
 // ============================================================
 
 #import <UIKit/UIKit.h>
-#import <objc/runtime.h>
 
 // ================= الإعدادات =================
-static NSString *const kOwnerName   = @"OMAR";                     // الاسم الظاهر
+static NSString *const kOwnerName    = @"OMAR";                     // الاسم الظاهر
 static NSString *const kMessage      = @"شكراً لاستخدامك التطبيق";   // الرسالة تحت الاسم
 static NSString *const kTwitterUser  = @"FQ_1E";                   // يوزر تويتر (بدون @)
 static NSString *const kTelegramUser = @"o52lo";                   // يوزر تيليجرام (بدون @)
@@ -25,65 +24,59 @@ static const BOOL kShowOnce = NO;
 
 static BOOL gShown = NO;
 
-@interface OMRCreditsView : NSObject
-+ (void)show;
+#pragma mark - Overlay View
+
+@interface OMRCreditsOverlay : UIView
+@property (nonatomic, strong) UIView *card;
+- (void)present;
 @end
 
-@implementation OMRCreditsView
+@implementation OMRCreditsOverlay
 
 + (UIImage *)appIcon {
     NSDictionary *icons = [[NSBundle mainBundle] objectForInfoDictionaryKey:@"CFBundleIcons"];
     NSArray *files = icons[@"CFBundlePrimaryIcon"][@"CFBundleIconFiles"];
-    UIImage *img = files.lastObject ? [UIImage imageNamed:files.lastObject] : nil;
-    return img;
+    return files.lastObject ? [UIImage imageNamed:files.lastObject] : nil;
 }
 
 + (void)openURL:(NSString *)urlString {
     NSURL *url = [NSURL URLWithString:urlString];
-    if (@available(iOS 10.0, *)) {
-        [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
-    } else {
-        [[UIApplication sharedApplication] openURL:url];
-    }
+    if (!url) return;
+    [[UIApplication sharedApplication] openURL:url options:@{} completionHandler:nil];
 }
 
-+ (UIWindow *)keyWindow {
-    UIWindow *win = nil;
-    if (@available(iOS 13.0, *)) {
-        for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
-            if ([scene isKindOfClass:[UIWindowScene class]]) {
-                for (UIWindow *w in ((UIWindowScene *)scene).windows) {
-                    if (w.isKeyWindow) { win = w; break; }
-                }
-            }
-        }
+- (instancetype)initWithFrame:(CGRect)frame {
+    self = [super initWithFrame:frame];
+    if (self) {
+        self.backgroundColor = [UIColor clearColor];
+        self.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
+        [self buildUI];
     }
-    if (!win) win = [UIApplication sharedApplication].keyWindow;
-    return win;
+    return self;
 }
 
-+ (void)show {
-    UIWindow *host = [self keyWindow];
-    if (!host) return;
-
-    BOOL dark = NO;
+- (BOOL)isDark {
     if (@available(iOS 13.0, *)) {
-        dark = (host.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark);
+        return (self.traitCollection.userInterfaceStyle == UIUserInterfaceStyleDark);
     }
-    UIColor *cardBG   = dark ? [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0] : [UIColor whiteColor];
-    UIColor *textMain = dark ? [UIColor whiteColor] : [UIColor colorWithRed:0.1 green:0.1 blue:0.12 alpha:1.0];
-    UIColor *textSub  = dark ? [UIColor colorWithWhite:0.7 alpha:1.0] : [UIColor colorWithWhite:0.45 alpha:1.0];
-    UIColor *btnBorder= dark ? [UIColor colorWithWhite:1.0 alpha:0.18] : [UIColor colorWithWhite:0.0 alpha:0.12];
+    return NO;
+}
 
-    // ---- الخلفية المعتمة ----
-    UIView *dim = [[UIView alloc] initWithFrame:host.bounds];
-    dim.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.0];
-    dim.autoresizingMask = UIViewAutoresizingFlexibleWidth | UIViewAutoresizingFlexibleHeight;
-    [host addSubview:dim];
+- (void)buildUI {
+    BOOL dark = [self isDark];
+    UIColor *cardBG    = dark ? [UIColor colorWithRed:0.11 green:0.11 blue:0.12 alpha:1.0] : [UIColor whiteColor];
+    UIColor *textMain  = dark ? [UIColor whiteColor] : [UIColor colorWithRed:0.1 green:0.1 blue:0.12 alpha:1.0];
+    UIColor *textSub   = dark ? [UIColor colorWithWhite:0.7 alpha:1.0] : [UIColor colorWithWhite:0.45 alpha:1.0];
+    UIColor *btnBorder = dark ? [UIColor colorWithWhite:1.0 alpha:0.18] : [UIColor colorWithWhite:0.0 alpha:0.12];
+
+    // إغلاق باللمس على الخلفية
+    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(bgTapped:)];
+    [self addGestureRecognizer:tap];
 
     // ---- البطاقة ----
-    CGFloat cardW = MIN(320.0, host.bounds.size.width - 48.0);
+    CGFloat cardW = MIN(320.0, self.bounds.size.width - 48.0);
     UIView *card = [[UIView alloc] init];
+    self.card = card;
     card.backgroundColor = cardBG;
     card.layer.cornerRadius = 22.0;
     card.layer.shadowColor = [UIColor blackColor].CGColor;
@@ -91,15 +84,14 @@ static BOOL gShown = NO;
     card.layer.shadowRadius = 24.0;
     card.layer.shadowOffset = CGSizeMake(0, 10);
     card.translatesAutoresizingMaskIntoConstraints = NO;
-    [dim addSubview:card];
-
+    [self addSubview:card];
     [NSLayoutConstraint activateConstraints:@[
-        [card.centerXAnchor constraintEqualToAnchor:dim.centerXAnchor],
-        [card.centerYAnchor constraintEqualToAnchor:dim.centerYAnchor],
+        [card.centerXAnchor constraintEqualToAnchor:self.centerXAnchor],
+        [card.centerYAnchor constraintEqualToAnchor:self.centerYAnchor],
         [card.widthAnchor constraintEqualToConstant:cardW],
     ]];
 
-    // ستاك عمودي داخل البطاقة
+    // ستاك عمودي
     UIStackView *stack = [[UIStackView alloc] init];
     stack.axis = UILayoutConstraintAxisVertical;
     stack.alignment = UIStackViewAlignmentCenter;
@@ -119,6 +111,7 @@ static BOOL gShown = NO;
     closeBtn.titleLabel.font = [UIFont systemFontOfSize:17 weight:UIFontWeightSemibold];
     [closeBtn setTitleColor:textSub forState:UIControlStateNormal];
     closeBtn.translatesAutoresizingMaskIntoConstraints = NO;
+    [closeBtn addTarget:self action:@selector(dismiss) forControlEvents:UIControlEventTouchUpInside];
     [card addSubview:closeBtn];
     [NSLayoutConstraint activateConstraints:@[
         [closeBtn.topAnchor constraintEqualToAnchor:card.topAnchor constant:10],
@@ -128,7 +121,7 @@ static BOOL gShown = NO;
     ]];
 
     // ---- الأيقونة ----
-    UIImage *icon = [self appIcon];
+    UIImage *icon = [OMRCreditsOverlay appIcon];
     if (icon) {
         UIImageView *iv = [[UIImageView alloc] initWithImage:icon];
         iv.layer.cornerRadius = 16.0;
@@ -157,7 +150,6 @@ static BOOL gShown = NO;
     msg.numberOfLines = 0;
     [stack addArrangedSubview:msg];
 
-    // مسافة صغيرة
     UIView *spacer = [[UIView alloc] init];
     [spacer.heightAnchor constraintEqualToConstant:4].active = YES;
     [stack addArrangedSubview:spacer];
@@ -181,26 +173,9 @@ static BOOL gShown = NO;
     [stack addArrangedSubview:tg];
     [tg.widthAnchor constraintEqualToAnchor:stack.widthAnchor].active = YES;
     [tg.heightAnchor constraintEqualToConstant:50].active = YES;
-
-    // ---- ظهور متحرك ----
-    card.transform = CGAffineTransformMakeScale(0.85, 0.85);
-    card.alpha = 0.0;
-    [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.75 initialSpringVelocity:0.5 options:0 animations:^{
-        dim.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.45];
-        card.transform = CGAffineTransformIdentity;
-        card.alpha = 1.0;
-    } completion:nil];
-
-    // إغلاق بالضغط على الخلفية أو زر الإغلاق
-    objc_setAssociatedObject(closeBtn, "dim", dim, OBJC_ASSOCIATION_ASSIGN);
-    [closeBtn addTarget:self action:@selector(dismiss:) forControlEvents:UIControlEventTouchUpInside];
-
-    UITapGestureRecognizer *tap = [[UITapGestureRecognizer alloc] initWithTarget:self action:@selector(bgTap:)];
-    [dim addGestureRecognizer:tap];
-    objc_setAssociatedObject(tap, "card", card, OBJC_ASSOCIATION_ASSIGN);
 }
 
-+ (UIButton *)accountButtonTitle:(NSString *)title text:(UIColor *)text border:(UIColor *)border {
+- (UIButton *)accountButtonTitle:(NSString *)title text:(UIColor *)text border:(UIColor *)border {
     UIButton *b = [UIButton buttonWithType:UIButtonTypeSystem];
     [b setTitle:title forState:UIControlStateNormal];
     b.titleLabel.font = [UIFont systemFontOfSize:15 weight:UIFontWeightSemibold];
@@ -211,43 +186,68 @@ static BOOL gShown = NO;
     return b;
 }
 
-+ (void)openTwitter  { [self openURL:[NSString stringWithFormat:@"https://twitter.com/%@", kTwitterUser]]; }
-+ (void)openTelegram { [self openURL:[NSString stringWithFormat:@"https://t.me/%@", kTelegramUser]]; }
+- (void)openTwitter  { [OMRCreditsOverlay openURL:[NSString stringWithFormat:@"https://twitter.com/%@", kTwitterUser]]; }
+- (void)openTelegram { [OMRCreditsOverlay openURL:[NSString stringWithFormat:@"https://t.me/%@", kTelegramUser]]; }
 
-+ (void)dismissView:(UIView *)dim {
-    UIView *card = dim.subviews.lastObject;
+- (void)present {
+    self.card.transform = CGAffineTransformMakeScale(0.85, 0.85);
+    self.card.alpha = 0.0;
+    [UIView animateWithDuration:0.35 delay:0 usingSpringWithDamping:0.75 initialSpringVelocity:0.5 options:0 animations:^{
+        self.backgroundColor = [UIColor colorWithWhite:0.0 alpha:0.45];
+        self.card.transform = CGAffineTransformIdentity;
+        self.card.alpha = 1.0;
+    } completion:nil];
+}
+
+- (void)dismiss {
     [UIView animateWithDuration:0.25 animations:^{
-        dim.backgroundColor = [UIColor clearColor];
-        card.alpha = 0.0;
-        card.transform = CGAffineTransformMakeScale(0.9, 0.9);
-    } completion:^(BOOL f){ [dim removeFromSuperview]; }];
+        self.backgroundColor = [UIColor clearColor];
+        self.card.alpha = 0.0;
+        self.card.transform = CGAffineTransformMakeScale(0.9, 0.9);
+    } completion:^(BOOL f){ [self removeFromSuperview]; }];
 }
 
-+ (void)dismiss:(UIButton *)sender {
-    UIView *dim = objc_getAssociatedObject(sender, "dim");
-    [self dismissView:dim];
-}
-
-+ (void)bgTap:(UITapGestureRecognizer *)tap {
-    UIView *card = objc_getAssociatedObject(tap, "card");
-    CGPoint p = [tap locationInView:tap.view];
-    if (!CGRectContainsPoint(card.frame, p)) {
-        [self dismissView:tap.view];
+- (void)bgTapped:(UITapGestureRecognizer *)tap {
+    CGPoint p = [tap locationInView:self];
+    if (!CGRectContainsPoint(self.card.frame, p)) {
+        [self dismiss];
     }
 }
 
 @end
 
-// ============================================================
-//  الربط: عرض البطاقة عند تفعيل التطبيق
-// ============================================================
+#pragma mark - Helpers
+
+static UIWindow *OMRActiveWindow(void) {
+    UIWindow *fallback = nil;
+    for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+        if (![scene isKindOfClass:[UIWindowScene class]]) continue;
+        UIWindowScene *ws = (UIWindowScene *)scene;
+        for (UIWindow *w in ws.windows) {
+            if (!fallback) fallback = w;
+            if (w.isKeyWindow) return w;
+        }
+    }
+    return fallback;
+}
+
+static void OMRShowCredits(void) {
+    UIWindow *host = OMRActiveWindow();
+    if (!host) return;
+    OMRCreditsOverlay *overlay = [[OMRCreditsOverlay alloc] initWithFrame:host.bounds];
+    [host addSubview:overlay];
+    [overlay present];
+}
+
+#pragma mark - Hook
+
 %hook UIApplication
 - (void)_applicationDidBecomeActive:(id)notification {
     %orig;
     if (kShowOnce && gShown) return;
     gShown = YES;
     dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(0.6 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^{
-        [OMRCreditsView show];
+        OMRShowCredits();
     });
 }
 %end
