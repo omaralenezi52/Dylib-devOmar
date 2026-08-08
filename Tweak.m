@@ -249,7 +249,8 @@ static void OMRScheduleShow(void) {
     });
 }
 
-%ctor {
+__attribute__((constructor))
+static void OMRInit(void) {
     @autoreleasepool {
         // نراقب لحظة تفعيل التطبيق — لا يحتاج Substrate
         [[NSNotificationCenter defaultCenter]

@@ -28,7 +28,9 @@ jobs:
       - name: Collect dylib
         run: |
           mkdir -p out
-          find .theos/obj -name "DevOmar.dylib" -exec cp {} out/DevOmar.dylib \;
+          DYLIB=$(find .theos/obj -name "*DevOmar*.dylib" | head -n 1)
+          echo "Found: $DYLIB"
+          cp "$DYLIB" out/DevOmar.dylib
           ls -la out
 
       - name: Upload dylib artifact
